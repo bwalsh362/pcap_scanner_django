@@ -5,7 +5,7 @@ import sqlite3
 import datetime
 from struct import *
 from pcap_scanner_app import packet
-from pcap_scanner_app import models
+# from pcap_scanner_app import models
 
 
 def main(argv):
@@ -26,6 +26,9 @@ def main(argv):
     #   promiscuous mode (1 for true)
     #   timeout (in milliseconds)
     """
+    f = open('/home/brian/Desktop/test.txt', 'w')
+    f.write(str(datetime.datetime.now()))
+    f.close()
     cap = pcapy.open_live(dev, 65536, 1, 0)
     # Start sniffing packets
     while 1:
@@ -160,12 +163,12 @@ def check_cdp_bytes(bytes_var, src_mac):
         elif int(tlv_type) == 26:
             first += tlv_length
             second += tlv_length
-    p = models.Device.create(ttl, src_mac, sys_name, sys_desc, port_desc, cap, mgmt_addr)
-    p.save()
-    invalid_device = models.Device.objects.get(expire__lt=datetime.datetime.now())
-    invalid_device.save()
-    # p = packet.Packet(ttl, src_mac, sys_name, sys_desc, port_desc, cap, mgmt_addr)
-    # connect_db(p)
+    # p = models.Device.create(ttl, src_mac, sys_name, sys_desc, port_desc, cap, mgmt_addr)
+    # p.save()
+    # invalid_device = models.Device.objects.get(expire__lt=datetime.datetime.now())
+    # invalid_device.save()
+    p = packet.Packet(ttl, src_mac, sys_name, sys_desc, port_desc, cap, mgmt_addr)
+    connect_db(p)
     # print('CDP Packet Created')
 
 
@@ -220,12 +223,12 @@ def check_bytes(bytes_var, src_mac):
             first += tlv_overhead+tlv_length
             second += tlv_overhead + tlv_length
         elif int(tlv_type, 2) == 0:
-            p = models.Device.create(ttl, src_mac, sys_name, sys_desc, port_desc, cap, mgmt_addr)
-            p.save()
-            invalid_device = models.Device.objects.get(expire__lt=datetime.datetime.now())
-            invalid_device.save()
-            # p = packet.Packet(ttl, src_mac, sys_name, sys_desc, port_desc, cap, mgmt_addr)
-            # connect_db(p)
+            # p = models.Device.create(ttl, src_mac, sys_name, sys_desc, port_desc, cap, mgmt_addr)
+            # p.save()
+            # invalid_device = models.Device.objects.get(expire__lt=datetime.datetime.now())
+            # invalid_device.save()
+            p = packet.Packet(ttl, src_mac, sys_name, sys_desc, port_desc, cap, mgmt_addr)
+            connect_db(p)
             # print('LLDP Packet Created')
             break
 
