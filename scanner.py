@@ -163,6 +163,8 @@ def check_cdp_bytes(bytes_var, src_mac):
         elif int(tlv_type) == 26:
             first += tlv_length
             second += tlv_length
+        else:
+            second = len(bytes_var)
     # p = models.Device.create(ttl, src_mac, sys_name, sys_desc, port_desc, cap, mgmt_addr)
     # p.save()
     # invalid_device = models.Device.objects.get(expire__lt=datetime.datetime.now())
