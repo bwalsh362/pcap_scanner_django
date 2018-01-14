@@ -8,10 +8,11 @@
             <div class="row">
                 <div id="main-div" class="col-lg-12">
                     <h1 class="page-header">This is the topology page</h1>
-                    <canvas id="topology-canvas">
+                    <canvas id="canvas" device-list-var="{{ device_list }}">
                         <script type="text/javascript" src="{% static 'js/topology-canvas.js' %}">
-                            add_icons({{ device_list }});
+                        var device_list = JSON.parse(document.getElementById('canvas')[0].getAttribute('device-list-var') || '{}');
                         </script>
+                        <button onclick="document.write('help me')">Try It</button>
                         This is my canvas
                     </canvas>
                 </div>
