@@ -17,9 +17,17 @@ class TopologyPageView(TemplateView):
         c = conn.cursor()
         devices = c.execute('SELECT * FROM packets')
         device_list = devices.fetchall()
+        conn.close()
         return render(request, 'topology.html', {'device_list': device_list})
 
 
 class InventoryPageView(ListView):
     def get(self, request, **kwargs):
-        return render(request, 'inventory.html', context=None)
+        conn = sqlite3.connect('db.sqlite3')
+        c = conn.cursor()
+        details = c.execute('SELECT * FROM snmp_data')
+        details_list = details.fetchall()
+        column_names = list(map(lambda x: x[0], c.description))
+        conn.close()
+        details_list.insert(0, column_names)
+        return render(request, 'inventory.html', {'details_list': details_list})

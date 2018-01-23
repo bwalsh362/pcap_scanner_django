@@ -16,7 +16,7 @@ def main(argv):
         # print(d)
 
     # dev = input("Enter device name to sniff: ")
-    dev = 'ens33'
+    dev = 'lo:0'
     # print("Sniffing device " + dev)
     """
     open device
