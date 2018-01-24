@@ -28,7 +28,18 @@ def check_table(cursor, query):
 
 def add_to_db(cursor, list, connection):
     print(list)
-    cursor.execute('INSERT OR IGNORE INTO snmp_data(ip_addr, mac_addr, cap_isOther, cap_isRepeater, cap_isBridge, cap_isWlanAP, cap_isRouter, cap_isTelephone, cap_isDocsisCableDevice, cap_isStationOnly, hostname) VALUES(?,?,?,?,?,?,?,?,?,?,?);', list)
+    cursor.execute('''INSERT OR IGNORE INTO snmp_data(ip_addr, 
+                                mac_addr, 
+                                cap_isOther, 
+                                cap_isRepeater, 
+                                cap_isBridge, 
+                                cap_isWlanAP, 
+                                cap_isRouter, 
+                                cap_isTelephone, 
+                                cap_isDocsisCableDevice, 
+                                cap_isStationOnly, 
+                                hostname) 
+                                VALUES(?,?,?,?,?,?,?,?,?,?,?);''', list)
     connection.commit()
 
 
@@ -127,6 +138,9 @@ def get_arp_table(engine, address):
             for varBinds in varBinds:
                 split_str = str(varBinds).split(' = ')[1]
                 if oid == '1.3.6.1.2.1.3.1.1.2':
+                    split_str = split_str[2:]
+                    split_str = [split_str[i:i+2] for i in range(0, len(split_str), 2)]
+                    split_str = ':'.join(split_str)
                     mac_list.append(split_str)
                 elif oid == '1.3.6.1.2.1.3.1.1.3':
                     ip_list.append(split_str)
