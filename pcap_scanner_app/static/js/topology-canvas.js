@@ -14,7 +14,7 @@ add_icons();
 
 function add_icons(){
     // context.fillRect(20,20,20,20);
-    for(i=0;i<=2;i++){
+    for (var i = 0; i < 2; i++){
         base_image = new Image();
         base_image.src = '../static/img/switch.png';
         base_image.onload = function(){

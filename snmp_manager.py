@@ -11,6 +11,12 @@ def main():
     ip_list, mac_list = get_arp_table(eng, address)
     oid_list = ['1.0.8802.1.1.2.1.3.6', '1.0.8802.1.1.2.1.3.3']
     get_details(eng, ip_list, mac_list, oid_list, cursor, connection)
+    used_ips = [address]
+    router_list = get_router_ips(cursor)
+    for ip in router_list:
+        if ip not in used_ips:
+            ip_list, mac_list = get_arp_table(eng, ip)
+            get_details(eng, ip_list, mac_list, oid_list, cursor, connection)
 
 
 def create_db_connection():
@@ -24,6 +30,12 @@ def check_table(cursor, query):
     row = cursor.fetchone()
     if row is None:
         create_snmpdata_table(cursor)
+
+
+def get_router_ips(cursor):
+    routers = cursor.execute('''SELECT ip_addr FROM snmp_data WHERE cap_isRouter = 1''')
+    routers_list = routers.fetchall()
+    return routers_list
 
 
 def add_to_db(cursor, list, connection):
