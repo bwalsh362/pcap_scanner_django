@@ -11,12 +11,13 @@
             <div class="row">
                 <div id="main-div" class="col-lg-12">
                     <h1 class="page-header">This is the topology page</h1>
-{#                    <canvas id="canvas" style="border: 1px solid black;" data-js-vars="{{ device_list }}">#}
-                        <script type="text/javascript" src="{% static 'js/topology-canvas.js' %}">
-                        </script>
-{#                        This is my canvas#}
-{#                    </canvas>#}
+                </div>
+                <div id="myModal" class="modal">
+                    <div id="myModalContent" class="modal-content">
+                        <span class="close">&times;</span>
+                    </div>
                 </div>
             </div>
 </div>
+<script src="{% static 'js/topology-canvas.js' %}"></script>
 {% endblock %}

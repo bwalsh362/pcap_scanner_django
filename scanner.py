@@ -5,7 +5,8 @@ import sqlite3
 import datetime
 from struct import *
 from pcap_scanner_app import packet
-# from pcap_scanner_app import models
+from pymongo import MongoClient
+import pymongo
 
 
 def main(argv):
@@ -16,7 +17,7 @@ def main(argv):
         # print(d)
 
     # dev = input("Enter device name to sniff: ")
-    dev = 'lo:0'
+    dev = 'ens33'
     # print("Sniffing device " + dev)
     """
     open device
@@ -37,20 +38,14 @@ def main(argv):
 
 
 def connect_db(packet):
-    conn = sqlite3.connect('db.sqlite3')
-    c = conn.cursor()
-    c.execute('''CREATE TABLE IF NOT EXISTS packets
-                  (expire text, mac text, sys_name text, sys_desc text, org_port text, mgmt_addr text, UNIQUE(mac));''')
-    c.execute('DELETE FROM packets WHERE expire < ?', (datetime.datetime.now(),))
+    client = MongoClient()
+    db = client.ntm_db
+    db.ntm_table.remove({"expire_date": {'$lt': (datetime.datetime.now())}})
     time = datetime.datetime.now() + datetime.timedelta(0, int(packet.ttl))
-    new_packet = [time, packet.mac, packet.system_name, packet.system_desc, packet.org_port, packet.mgmt_addr]
-    c.executemany('INSERT OR IGNORE INTO packets VALUES (?, ?, ?, ?, ?, ?)', (new_packet,))
-    # full_array = packet.capabilities
-    # cap_length = len(packet.capabilities)
-    # for n in range(cap_length, 8):
-    #     full_array.append('')
-    conn.commit()
-    conn.close()
+    new_packet = [{'expire_date': time, 'mac': packet.mac, 'sys_name': packet.system_name, 'sys_desc': packet.system_desc, 'org_port': packet.org_port, 'mgmt_addr': packet.mgmt_addr}]
+    db.ntm_table.insert(new_packet)
+    # db.ntm_table.create_index([("mac", pymongo.ASCENDING)],
+    #                           unique=True)
 
 
 def eth_addr(a):
@@ -74,22 +69,22 @@ def parse_packet(packet):
     destination_addr = eth_addr(packet[0:6])
     if destination_addr == '01:00:0c:cc:cc:cc':
         source_addr = eth_addr(packet[6:12])
-        # print('Destination MAC: ' + destination_addr + ' Source MAC: ' + source_addr + ' Length: ' + str(eth_protocol))
+        print('Destination MAC: ' + destination_addr + ' Source MAC: ' + source_addr + ' Length: ' + str(eth_protocol))
         parse_cdp_packet(packet, eth_header_length, source_addr)
     elif destination_addr == '01:80:c2:00:00:0e':
         source_addr = eth_addr(packet[6:12])
-        # print('Destination MAC: ' + destination_addr + ' Source MAC: ' + source_addr + ' Protocol: ' + str(eth_protocol))
+        print('Destination MAC: ' + destination_addr + ' Source MAC: ' + source_addr + ' Protocol: ' + str(eth_protocol))
         parse_lldp_packet(packet, eth_header_length, source_addr)
 
 
 def parse_lldp_packet(packet, eth_length, src_mac):
-    # print("LLDP")
+    print("LLDP")
     begin_lldp_data = packet[eth_length:]
     check_bytes(begin_lldp_data, src_mac)
 
 
 def parse_cdp_packet(packet, eth_length, src_mac):
-    # print("CDP")
+    print("CDP")
     llc_header_length = 8
     begin_cdp_data = packet[eth_length+llc_header_length:]
     check_cdp_bytes(begin_cdp_data, src_mac)
