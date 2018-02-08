@@ -1,12 +1,10 @@
 import socket
 import pcapy
 import sys
-import sqlite3
 import datetime
 from struct import *
 from pcap_scanner_app import packet
 from pymongo import MongoClient
-import pymongo
 
 
 def main(argv):
@@ -111,9 +109,9 @@ def check_cdp_bytes(bytes_var, src_mac):
             sys_name = parse_system_name(bytes_var[first+cdp_overhead:first+tlv_length])
             first += tlv_length
             second += tlv_length
-        elif int(tlv_type) == 2:
-            first += tlv_length
-            second += tlv_length
+        # elif int(tlv_type) == 2:
+        #     first += tlv_length
+        #     second += tlv_length
         elif int(tlv_type) == 3:
             port_desc = parse_port_desc(bytes_var[first+cdp_overhead:first+tlv_length])
             first += tlv_length
@@ -151,7 +149,7 @@ def check_cdp_bytes(bytes_var, src_mac):
         elif int(tlv_type) == 19:
             first += tlv_length
             second += tlv_length
-        elif int(tlv_type) == 22:
+        elif int(tlv_type) == 22 or int(tlv_type) == 2:
             mgmt_addr = parse_cdp_manage_add(bytes_var[first:first+tlv_length])
             first += tlv_length
             second += tlv_length

@@ -1,85 +1,66 @@
 import socket, struct
-import sqlite3
 from pysnmp.hlapi import *
 from pymongo import MongoClient
+from pprint import pprint
 
 
 def main():
-    cursor, connection = create_db_connection()
-    check_table(cursor, '''SELECT * FROM sqlite_master WHERE type='table' AND name='snmp_data';''')
+    db = create_db_connection()
     address = get_def_gateway()
+    # address = '10.0.90.1'
     eng = create_snmp_engine()
     ip_list, mac_list = get_arp_table(eng, address)
     oid_list = ['1.0.8802.1.1.2.1.3.6', '1.0.8802.1.1.2.1.3.3']
-    get_details(eng, ip_list, mac_list, oid_list, cursor, connection)
+    get_details(eng, ip_list, mac_list, oid_list, db)
     used_ips = [address]
-    router_list = get_router_ips(cursor)
+    router_list = get_router_ips(db)
     for ip in router_list:
         if ip not in used_ips:
             ip_list, mac_list = get_arp_table(eng, ip)
-            get_details(eng, ip_list, mac_list, oid_list, cursor, connection)
+            get_details(eng, ip_list, mac_list, oid_list, db)
 
 
 def create_db_connection():
-    conn = sqlite3.connect('db.sqlite3')
-    c = conn.cursor()
-    return c, conn
+    client = MongoClient()
+    db = client.ntm_db
+    return db
 
 
-def check_table(cursor, query):
-    cursor.execute(query)
-    row = cursor.fetchone()
-    if row is None:
-        create_snmpdata_table(cursor)
+def get_router_ips(db):
+    routers = db.snmp_table.find({"cap_isRouter": 1}, {"ip_addr": 1})
+    for document in routers:
+        pprint(document)
+    return routers
 
 
-def get_router_ips(cursor):
-    routers = cursor.execute('''SELECT ip_addr FROM snmp_data WHERE cap_isRouter = 1''')
-    routers_list = routers.fetchall()
-    return routers_list
+def add_to_db(db, list):
+    if db.snmp_table.find_one({'hostname': list[10]}, {"hostname": 1}) is None:
+        db.snmp_table.insert({'ip_addr': list[0],
+                              'mac_addr': list[1],
+                              'cap_isOther': list[2],
+                              'cap_isRepeater': list[3],
+                              'cap_isBridge': list[4],
+                              'cap_isWlanAP': list[5],
+                              'cap_isRouter': list[6],
+                              'cap_isTelephone': list[7],
+                              'cap_isDocsisCableDevice': list[8],
+                              'cap_isStationOnly': list[9],
+                              'hostname': list[10]})
+    else:
+        db.snmp_table.update({'hostname': list[10]},
+                             {'$addToSet': {'ip_addr': { '$each': list[0]}, 'mac_addr': {'$each': list[1]}}},
+                             upsert=True)
 
 
-def add_to_db(cursor, list, connection):
-    print(list)
-    cursor.execute('''INSERT OR IGNORE INTO snmp_data(ip_addr, 
-                                mac_addr, 
-                                cap_isOther, 
-                                cap_isRepeater, 
-                                cap_isBridge, 
-                                cap_isWlanAP, 
-                                cap_isRouter, 
-                                cap_isTelephone, 
-                                cap_isDocsisCableDevice, 
-                                cap_isStationOnly, 
-                                hostname) 
-                                VALUES(?,?,?,?,?,?,?,?,?,?,?);''', list)
-    connection.commit()
-
-
-def create_snmpdata_table(cursor):
-    cursor.execute('''CREATE TABLE snmp_data (  ip_addr text NOT NULL, 
-                                                mac_addr text NOT NULL,
-                                                cap_isOther INTEGER,
-                                                cap_isRepeater INTEGER,
-                                                cap_isBridge INTEGER,
-                                                cap_isWlanAP INTEGER,
-                                                cap_isRouter INTEGER,
-                                                cap_isTelephone INTEGER,
-                                                cap_isDocsisCableDevice INTEGER,
-                                                cap_isStationOnly INTEGER,
-                                                hostname text NOT NULL,
-                                                PRIMARY KEY (ip_addr, mac_addr, hostname));''')
-
-
-def get_details(eng, ip_list, mac_list, oid_list, cursor, connection):
+def get_details(eng, ip_list, mac_list, oid_list, db):
     for ip in ip_list:
         mac = mac_list[ip_list.index(ip)]
         print("The current IP is: " + ip)
-        details = [ip, mac]
-        snmp_details(eng, oid_list, details, ip, cursor, connection)
+        details = [[ip], [mac]]
+        snmp_details(eng, oid_list, details, ip, db)
 
 
-def snmp_details(eng, oid_list, details, ip, cursor, connection):
+def snmp_details(eng, oid_list, details, ip, db):
     for oid in oid_list:
         for (errorIndication, errorStatus, errorIndex, varBinds) in nextCmd(eng,
                                                                             CommunityData('capstone-ro'),
@@ -95,7 +76,7 @@ def snmp_details(eng, oid_list, details, ip, cursor, connection):
             else:
                 details = parse_details(varBinds, details)
                 break
-    add_to_db(cursor, details, connection)
+    add_to_db(db, details)
 
 
 def parse_details(varBinds, details):
