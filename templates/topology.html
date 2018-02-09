@@ -6,7 +6,7 @@
 </script>
 <div id="page-wrapper">
         <script>
-            var JS_LIST = "{{ device_list }}";
+            var JS_LIST = {{ device_list|safe }};
         </script>
             <div class="row">
                 <div id="main-div" class="col-lg-12">

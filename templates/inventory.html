@@ -1,23 +1,22 @@
 {% extends 'index.html' %}
 {% block content %}
-
+{% load static %}
 <div id="page-wrapper">
+<script>
+    var data = {{ details_list|safe }};
+</script>
             <div class="row">
                 <div class="col-lg-12">
                     <h1 class="page-header">This is the inventory page</h1>
                 </div>
                 <table class="table" id="table">
-{#                {% for item in column_names %}#}
-{#                    <th> {{ item }}</th>#}
-{#                {% endfor %}#}
-                {% for item in details_list %}
                     <tr>
-                    {% for detail_item in item %}
-                        <td> {{ detail_item }}</td>
-                    {% endfor %}
+                        <th onclick="sortTable(0)">IP Address(s)</th>
+                        <th onclick="sortTable(1)">MAC Address(s)</th>
+                        <th onclick="sortTable(2)">Hostname</th>
                     </tr>
-                {% endfor %}
                 </table>
             </div>
 </div>
+<script src="{% static 'js/inventory-table.js' %}"></script>
 {% endblock %}
