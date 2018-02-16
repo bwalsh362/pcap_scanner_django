@@ -14,6 +14,7 @@ function getSources (devices){
         }else if (devices[i][2] === 'router'){
             source_arr.push('../static/img/router.png');
         }else{
+            source_arr.push('../static/img/pic.png');
             console.log('other');
         }
     }
