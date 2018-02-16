@@ -5,7 +5,6 @@ import datetime
 from struct import *
 from pcap_scanner_app import packet
 from pymongo import MongoClient
-import neighbors
 
 
 def main(argv):
@@ -34,11 +33,6 @@ def main(argv):
     while 1:
         (header, packet) = cap.next()
         parse_packet(packet)
-        get_neighbors()
-
-
-# def get_neighbors():
-#     neighbors.main()
 
 
 def connect_db(packet):

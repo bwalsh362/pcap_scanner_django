@@ -7,11 +7,11 @@ function getSources (devices){
     var source_arr = [];
     for(var i = 0; i < devices.length; i++){
         // var tmp_array = devices[i].split(',');
-        if (devices[i][4] === '1' && devices[i][6] === '1'){
+        if (devices[i][2] === 'ml_switch'){
             source_arr.push('../static/img/ml_switch.png');
-        }else if (devices[i][4] === '1'){
+        }else if (devices[i][2] === 'switch'){
             source_arr.push('../static/img/switch.png');
-        }else if (devices[i][6] === '1'){
+        }else if (devices[i][2] === 'router'){
             source_arr.push('../static/img/router.png');
         }else{
             console.log('other');
@@ -47,7 +47,7 @@ function imagesLoaded(){
         button.setAttribute('onclick', "buttonClicked(this.id)");
         button.setAttribute('data-toggle', "tooltip");
         button.setAttribute('data-placement', "bottom");
-        button.setAttribute('title', data[10]);
+        button.setAttribute('title', data[3]);
         var body = document.getElementById("main-div");
         body.appendChild(button);
     }
@@ -61,7 +61,8 @@ function buttonClicked(clickedId){
     var modal_cont = document.getElementById('myModalContent');
     modal_cont.innerHTML = "<p>IP Address: " + data[0] + "<br />" +
         "MAC Address: " + data[1] + "<br />" +
-        "Hostname: " + data[10] + "</p>";
+        "Hostname: " + data[3] + "<br />" +
+        "Connected Devices: " + data[4] + "</p>";
     modal.style.display = "block";
     span.onclick = function () {
         modal.style.display = "none";
