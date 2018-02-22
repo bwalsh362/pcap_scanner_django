@@ -31,3 +31,9 @@ class InventoryPageView(ListView):
             details_list = list(document.values())
             details_arr.append(details_list)
         return render(request, 'inventory.html', {'details_list': details_arr})
+
+
+class DevicePageView(TemplateView):
+    def get(self, request, **kwargs):
+        device_details = []
+        return render(request, 'device.html', {'device_details': device_details})

@@ -1,0 +1,14 @@
+{% extends 'index.html' %}
+{% block content %}
+{% load static %}
+<div id="page-wrapper">
+<script>
+    var device_list = {{ device_details|safe }};
+</script>
+    <div class="row">
+                <div class="col-lg-12">
+                    <h1 class="page-header">This is the inventory page</h1>
+                </div>
+    </div>
+</div>
+{% endblock %}
