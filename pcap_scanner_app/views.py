@@ -35,5 +35,9 @@ class InventoryPageView(ListView):
 
 class DevicePageView(TemplateView):
     def get(self, request, **kwargs):
-        device_details = []
-        return render(request, 'device.html', {'device_details': device_details})
+        client = MongoClient()
+        db = client.ntm_db
+        context = super().get_context_data(**kwargs)
+        device = context.get('tag')
+        details = db.snmp_table.find_one({'hostname': str(device)})
+        return render(request, 'device.html', {'device_details': details})

@@ -6,7 +6,13 @@ function createTable(){
     for (var a = 0; a < data.length; a++){
         var row = document.createElement("tr");
         for (var b = 0; b < data[a].length; b++){
-            if (b === 4){
+            if (b === 2){
+                var cell = document.createElement("td");
+                var cellText = document.createTextNode(data[a][b]);
+                cell.innerHTML += "<a href='/inventory/tag=" + data[a][b] + "'>" + data[a][b] + "</a>";
+                row.appendChild(cell);
+            }
+            else if (b === 4){
                 var cell = document.createElement("td");
                 var cellText = document.createTextNode(data[a][b].length);
                 cell.appendChild(cellText);
