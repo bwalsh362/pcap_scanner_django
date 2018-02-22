@@ -15,7 +15,7 @@ def main(argv):
         # print(d)
 
     # dev = input("Enter device name to sniff: ")
-    dev = 'ens33'
+    dev = 'tap0'
     # print("Sniffing device " + dev)
     """
     open device
@@ -38,9 +38,7 @@ def main(argv):
 def connect_db(packet):
     client = MongoClient()
     db = client.ntm_db
-    db.ntm_table.remove({"expire_date": {'$lt': (datetime.datetime.now())}})
-    time = datetime.datetime.now() + datetime.timedelta(0, int(packet.ttl))
-    new_packet = [{'expire_date': time, 'mac': packet.mac, 'sys_name': packet.system_name, 'sys_desc': packet.system_desc, 'org_port': packet.org_port, 'mgmt_addr': packet.mgmt_addr}]
+    new_packet = [{'mac_addr': packet.mac, 'hostname': packet.system_name, 'ip_addr': packet.mgmt_addr}]
     db.ntm_table.insert(new_packet)
     # db.ntm_table.create_index([("mac", pymongo.ASCENDING)],
     #                           unique=True)
@@ -162,7 +160,7 @@ def check_cdp_bytes(bytes_var, src_mac):
     # p.save()
     # invalid_device = models.Device.objects.get(expire__lt=datetime.datetime.now())
     # invalid_device.save()
-    p = packet.Packet(ttl, src_mac, sys_name, sys_desc, port_desc, cap, mgmt_addr)
+    p = packet.Packet(src_mac, sys_name, mgmt_addr)
     connect_db(p)
     # print('CDP Packet Created')
 
@@ -176,6 +174,8 @@ def check_bytes(bytes_var, src_mac):
     while second < len(bytes_var):
         var = unpack('!H', bytes_var[first:second+1])
         var_bin = (bin(int(format_hex(var[0]), 16))[2:].zfill(16))
+        sys_name = ''
+        mgmt_addr = ''
         tlv_type = var_bin[0:tlv_type_len]
         tlv_length = var_bin[-tlv_len_len:]
         tlv_length = int(tlv_length, 2)
@@ -222,7 +222,7 @@ def check_bytes(bytes_var, src_mac):
             # p.save()
             # invalid_device = models.Device.objects.get(expire__lt=datetime.datetime.now())
             # invalid_device.save()
-            p = packet.Packet(ttl, src_mac, sys_name, sys_desc, port_desc, cap, mgmt_addr)
+            p = packet.Packet(src_mac, sys_name, mgmt_addr)
             connect_db(p)
             # print('LLDP Packet Created')
             break
@@ -284,9 +284,15 @@ def parse_capabilities(bytestring):
 def parse_cdp_capabilities(bytestring):
     var = unpack('!HHI', bytestring)
     cap_bin = (bin(int(format_hex(var[2]), 16))[2:].zfill(32))
+    device = ''
+    if cap_bin[-1] == '1' and cap_bin[-4] == '1':
+        device = "ml_switch"
+    elif cap_bin[-4] == '1':
+        device = "switch"
+    elif cap_bin[-1] == '1':
+        device = "router"
+    return device
     # print("Enabled Capabilities: ")
-    cap = determine_cdp_capabilities(cap_bin)
-    return cap
 
 
 def determine_cdp_capabilities(binarystring):

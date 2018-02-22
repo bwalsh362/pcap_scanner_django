@@ -1,6 +1,8 @@
 import socket, struct
 from pysnmp.hlapi import *
 from pymongo import MongoClient
+import alert
+used_ips = []
 
 
 def main():
@@ -11,7 +13,7 @@ def main():
     ip_list, mac_list = get_arp_table(eng, address)
     oid_list = ['1.0.8802.1.1.2.1.3.3.0', '1.0.8802.1.1.2.1.3.6.0']
     get_details(eng, ip_list, mac_list, oid_list, db)
-    used_ips = [address]
+    used_ips.append(address)
     router_list = get_router_ips(db)
     for ip in router_list:
         if ip not in used_ips:
@@ -37,11 +39,17 @@ def get_router_ips(db):
 def add_to_db(db, list):
     if list.__len__() >= 5:
         if db.snmp_table.find_one({'hostname': list[2]}, {"hostname": 1}) is None:
+            alert.send_alert("WARNING!!! A new device with the following information was added."
+                             "\n\tHostname: " + str(list[2]) + "\n"
+                             "\tIP Address(s): " + str(list[0]) + "\n"
+                             "If this was expected, ignore this message.")
             db.snmp_table.insert({'ip_addr': list[0],
                                   'mac_addr': list[1],
                                   'type': list[3],
                                   'hostname': list[2],
-                                  'conn_devices': list[4]})
+                                  'conn_devices': list[4],
+                                  'interface_details': list[5],
+                                  'device_details': list[6]})
         else:
             db.snmp_table.update({'hostname': list[2]},
                                  {'$addToSet': {'ip_addr': { '$each': list[0]}, 'mac_addr': {'$each': list[1]}, 'conn_devices': {'$each': list[4]}}},
@@ -57,7 +65,14 @@ def get_details(eng, ip_list, mac_list, oid_list, db):
         conn_devices = snmp_walk_details(eng, '1.0.8802.1.1.2.1.4.1.1.9', ip)
         if conn_devices is not None and conn_devices.__len__() >= 1:
             details.append(conn_devices)
-        # print(details)
+        interface_details = snmp_walk_details(eng, '1.3.6.1.2.1.2.2', ip)
+        if interface_details is not None and interface_details.__len__() >= 1:
+            details.append(interface_details)
+        device_details = snmp_walk_details(eng, '1.3.6.1.2.1.47.1.1.1', ip)
+        if device_details is not None and device_details.__len__() >= 1:
+            details.append(device_details)
+        else:
+            details.append([""])
         add_to_db(db, details)
 
 
@@ -101,7 +116,48 @@ def snmp_walk_details(eng, oid, ip):
             break
         else:
             for varBind in varBinds:
-                details = parse_conn_device_details(varBinds, details)
+                if oid == '1.3.6.1.4.1.9.9.23.1.2.1.1.6' or oid == '1.0.8802.1.1.2.1.4.1.1.9':
+                    details = parse_conn_device_details(varBinds, details)
+                elif oid == '1.3.6.1.2.1.2.2':
+                    details = parse_interface_details(varBinds, details)
+                elif oid == '1.3.6.1.2.1.47.1.1.1':
+                    details = parse_device_details(varBinds, details)
+    return details
+
+
+def parse_device_details(varBinds, details):
+    name, value = varBinds[0]
+    if str(name) == '1.3.6.1.2.1.47.1.1.1.1.2.1':
+        details.append(str(value))
+    elif str(name) == '1.3.6.1.2.1.47.1.1.1.1.11.1':
+        details.append(str(value))
+    elif str(name) == '1.3.6.1.2.1.47.1.1.1.1.12.1':
+        details.append(str(value))
+    elif str(name) == '1.3.6.1.2.1.47.1.1.1.1.13.1':
+        details.append(str(value))
+    return details
+
+
+def parse_interface_details(varBinds, details):
+    name, value = varBinds[0]
+    if str(name)[:20] == '1.3.6.1.2.1.2.2.1.1.':
+        details.append([str(value)])
+    elif str(name)[:20] == '1.3.6.1.2.1.2.2.1.2.':
+        for item in details:
+            if item[0] == str(name).split('.')[-1]:
+                item.append(str(value))
+    elif str(name)[:20] == '1.3.6.1.2.1.2.2.1.5.':
+        for item in details:
+            if item[0] == str(name).split('.')[-1]:
+                item.append(str(value))
+    elif str(name)[:20] == '1.3.6.1.2.1.2.2.1.8.':
+        for item in details:
+            if item[0] == str(name).split('.')[-1]:
+                item.append(str(value))
+    elif str(name)[:20] == '1.3.6.1.2.1.2.2.1.10':
+        for item in details:
+            if item[0] == str(name).split('.')[-1]:
+                item.append(str(value))
     return details
 
 

@@ -6,10 +6,42 @@ function createTable(){
     for (var a = 0; a < data.length; a++){
         var row = document.createElement("tr");
         for (var b = 0; b < data[a].length; b++){
-            var cell = document.createElement("td");
-            var cellText = document.createTextNode(data[a][b]);
-            cell.appendChild(cellText);
-            row.appendChild(cell);
+            if (b === 4){
+                var cell = document.createElement("td");
+                var cellText = document.createTextNode(data[a][b].length);
+                cell.appendChild(cellText);
+                row.appendChild(cell);
+            }
+            else if (b === 5){
+                console.log(data[a][b][2]);
+                console.log(data[a][b][0]);
+                var cell = document.createElement("td");
+                if(data[a][b][2] === undefined || data[a][b][2] === ""){
+                    var cellText = document.createTextNode("N/A");
+                }else {
+                    var cellText = document.createTextNode(data[a][b][2]);
+                }
+                cell.appendChild(cellText);
+                row.appendChild(cell);
+                var cell = document.createElement("td");
+                if(data[a][b][0] === "" || data[a][b][0] === undefined){
+                    var cellText = document.createTextNode("N/A");
+                }else {
+                    var cellText = document.createTextNode(data[a][b][0]);
+                }
+                cell.appendChild(cellText);
+                row.appendChild(cell);
+            }
+            else{
+                var cell = document.createElement("td");
+                if(data[a][b][2] === ""){
+                    var cellText = document.createTextNode("N/A");
+                }else {
+                    var cellText = document.createTextNode(data[a][b]);
+                }
+                cell.appendChild(cellText);
+                row.appendChild(cell);
+            }
         }
         tbody.appendChild(row);
     }

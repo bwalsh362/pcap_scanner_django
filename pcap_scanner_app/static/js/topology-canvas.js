@@ -75,7 +75,7 @@
 //     }
 // }
 
-var net,net2;
+var net;
 
 var body = document.getElementById("body");
 body.onload = function ()
@@ -85,43 +85,30 @@ body.onload = function ()
       //Id of the svg and defs
       net.addSVG("mySVG");
       net.addDefs("myDefs");
-	  //Creating elements
-      // net.addNode("NODE1",170,220);
-      // net.addNode("NODE2",600,50);
-      // net.addNode("NODE3",200,100);
-      // net.addNode("NODE4",800,300);
-      // net.addLink("NODE1","NODE2");
-      // net.addLink("NODE2","NODE1");
-      // //Bidirectional link
-      // net.addLink("NODE2","NODE4",true);
-      // net.addLink("NODE3","NODE1");
-      // net.addLink("NODE1","NODE3");
-      //
-      // net.addVerticalBus("bus1", 900, 0);
-      // net.addVerticalBus("bus2", 20, 0);
-      //
-      // net.addBusLink("bus1", "NODE2");
-      // net.addBusLink("bus1","NODE4");
-      // net.addBusLink("bus2", "NODE1");
-      // net.addBusLink("bus2","NODE2");
-      // net.addBusLink("bus2","NODE3");
-      //
-      // net.addLabel("node", "NODE1", "node 1");
-      // net.addLabel("link","NODE1:NODE2","link 1");
-      // net.addLabel("buslink","bus1:NODE2","buslink 1");
-      // //Multiple labels
-      // net.addLabel("bus", "bus1", "bus one");
-      // net.addLabel("node","NODE3","one","left","top");
-      // net.addLabel("node","NODE3","two","none","top");
-      // net.addLabel("node","NODE3","three","right","top");
-      // net.addLabel("node","NODE3","four","right","none");
-      // net.addLabel("node","NODE3","five","right","bottom");
-      // net.addLabel("node","NODE3","six","none","bottom");
-      // net.addLabel("node","NODE3","seven","left","bottom");
-      // net.addLabel("node","NODE3","eight","left","none");
-      // net.addLabel("node","NODE3","nine","left","top");
-      // net.addLabel("node","NODE3","ten","none","top");
 
+      for (var i = 0; i < JS_LIST.length; i++){
+          var location = 50;
+          var href = '';
+          if (JS_LIST[i][2] === 'ml_switch'){
+              href = '../static/img/ml_switch.png';
+        }else if (JS_LIST[i][2] === 'switch'){
+              href = '../static/img/switch.png';
+        }else if (JS_LIST[i][2] === 'router'){
+              href = '../static/img/router.png';
+        }else{
+              href = '../static/img/pic.png';
+              console.log('other');
+        }
+          net.addNode(JS_LIST[i][3], (i*location)+30, (i*location)+30, href);
+          net.addLabel("node", JS_LIST[i][3], JS_LIST[i][3])
+      }
+      for (var a = 0; a < JS_LIST.length; a++){
+          for (var b = 0; b < JS_LIST[a][4].length; b++){
+              net.addLink(JS_LIST[a][3], JS_LIST[a][4][b]);
+              net.addLink(JS_LIST[a][4][b], JS_LIST[a][3]);
+          }
+      }
+	 
       //Timeout is because there are async functions and it gets some time to
       //Calculate positions
       setTimeout("net.drawNetwork()",300);

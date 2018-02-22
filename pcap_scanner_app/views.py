@@ -25,7 +25,7 @@ class InventoryPageView(ListView):
     def get(self, request, **kwargs):
         client = MongoClient()
         db = client.ntm_db
-        details = db.snmp_table.find({}, {'_id': 0, 'hostname': 1, 'ip_addr': 1, 'mac_addr': 1, 'conn_devices': 1})
+        details = db.snmp_table.find({}, {'_id': 0, 'hostname': 1, 'ip_addr': 1, 'mac_addr': 1, 'conn_devices': 1, 'interface_details': 1, 'device_details': 1})
         details_arr = []
         for document in details:
             details_list = list(document.values())
