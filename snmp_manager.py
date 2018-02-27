@@ -38,24 +38,45 @@ def get_router_ips(db):
     return ip_list
 
 
-def add_to_db(db, list):
-    if list.__len__() >= 5:
-        if db.snmp_table.find_one({'hostname': list[2]}, {"hostname": 1}) is None:
+def add_to_db(db, packet_list):
+    if packet_list.__len__() >= 5:
+        if db.snmp_table.find_one({'hostname': packet_list[2]}, {"hostname": 1}) is None:
             alert.send_alert("WARNING!!! A new device with the following information was added."
-                             "\n\tHostname: " + str(list[2]) + "\n"
-                             "\tIP Address(s): " + str(list[0]) + "\n"
+                             "\n\tHostname: " + str(packet_list[2]) + "\n"
+                             "\tIP Address(s): " + str(packet_list[0]) + "\n"
                              "If this was expected, ignore this message.")
-            db.snmp_table.insert({'ip_addr': list[0],
-                                  'mac_addr': list[1],
-                                  'type': list[3],
-                                  'hostname': list[2],
-                                  'conn_devices': list[4],
-                                  'interface_details': list[5],
-                                  'device_details': list[6]})
+            db.snmp_table.insert({'ip_addr': packet_list[0],
+                                  'mac_addr': packet_list[1],
+                                  'type': packet_list[3],
+                                  'hostname': packet_list[2],
+                                  'conn_devices': packet_list[4],
+                                  'interface_details': packet_list[5],
+                                  'device_details': packet_list[6]})
         else:
-            db.snmp_table.update({'hostname': list[2]},
-                                 {'$addToSet': {'ip_addr': { '$each': list[0]}, 'mac_addr': {'$each': list[1]}, 'conn_devices': {'$each': list[4]}}},
+            prev_int_details = db.snmp_table.find_one({'hostname': packet_list[2]}, {'_id': 0, 'interface_details': 1})
+            details_list = list(prev_int_details.values())
+            bandwidth_arr = []
+            if sys.argv[4] == "True":
+                prev_interface_input = []
+                interface_speed = []
+                for interface in details_list[0]:
+                    prev_interface_input.append(interface[4])
+                    interface_speed.append(interface[2])
+                bandwidth_arr = calculate_bandwidth(prev_interface_input, interface_speed, packet_list[5], sys.argv[3])
+            db.snmp_table.update({'hostname': packet_list[2]},
+                                 {'$addToSet': {'ip_addr': {'$each': packet_list[0]}, 'mac_addr': {'$each': packet_list[1]}, 'conn_devices': {'$each': packet_list[4]}}, '$set': {'interface_details': packet_list[5], 'bandwidth_util': bandwidth_arr}},
                                  upsert=True)
+
+
+def calculate_bandwidth(prev_interface_input, interface_speed, new_interface_details_arr, time):
+    bandwidth_list = []
+    for interface in range(prev_interface_input.__len__()):
+        first_equation = (abs(int(prev_interface_input[int(interface)]) - int(new_interface_details_arr[int(interface)][4])) * 8 * 100)
+        second_equation = (time * int(interface_speed[int(interface)]))
+        bandwidth = (int(first_equation)/int(second_equation))
+        bandwidth_list.append(bandwidth)
+        print(bandwidth)
+    return bandwidth_list
 
 
 def get_details(eng, ip_list, mac_list, oid_list, db):
