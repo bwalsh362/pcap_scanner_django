@@ -2,10 +2,12 @@ import socket, struct
 from pysnmp.hlapi import *
 from pymongo import MongoClient
 import alert
+import sys
 used_ips = []
 
 
 def main():
+    print(sys.argv)
     db = create_db_connection()
     # address = get_def_gateway()
     address = '10.0.10.1'
@@ -79,8 +81,8 @@ def get_details(eng, ip_list, mac_list, oid_list, db):
 def snmp_details(eng, oid_list, details, ip, mac, db):
     for oid in oid_list:
         g = getCmd(eng,
-                   CommunityData('capstone-ro'),
-                   UdpTransportTarget((ip, 161)),
+                   CommunityData(sys.argv[2]),
+                   UdpTransportTarget((ip, sys.argv[1])),
                    ContextData(),
                    ObjectType(ObjectIdentity(oid)))
         results = (next(g))[3]
@@ -102,8 +104,8 @@ def snmp_details(eng, oid_list, details, ip, mac, db):
 def snmp_walk_details(eng, oid, ip):
     details = []
     for (errorIndication, errorStatus, errorIndex, varBinds) in nextCmd(eng,
-                                                                        CommunityData('capstone-ro'),
-                                                                        UdpTransportTarget((ip, 161)),
+                                                                        CommunityData(sys.argv[2]),
+                                                                        UdpTransportTarget((ip, sys.argv[1])),
                                                                         ContextData(),
                                                                         ObjectType(ObjectIdentity(oid)),
                                                                         lexicographicMode=False):
@@ -228,8 +230,8 @@ def get_arp_table(engine, address):
          errorStatus,
          errorIndex,
          varBinds) in nextCmd(engine,
-               CommunityData('capstone-ro'),
-               UdpTransportTarget((address, 161)),
+               CommunityData(sys.argv[2]),
+               UdpTransportTarget((address, sys.argv[1])),
                ContextData(),
                ObjectType(ObjectIdentity('1.3.6.1.2.1.3.1.1.2'))):
         name, value = varBinds[0]

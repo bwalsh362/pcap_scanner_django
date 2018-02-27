@@ -39,5 +39,6 @@ class DevicePageView(TemplateView):
         db = client.ntm_db
         context = super().get_context_data(**kwargs)
         device = context.get('tag')
-        details = db.snmp_table.find_one({'hostname': str(device)})
-        return render(request, 'device.html', {'device_details': details})
+        details = db.snmp_table.find_one({'hostname': str(device)}, {'_id': 0})
+        details_list = list(details.values())
+        return render(request, 'device.html', {'device_details': details_list})

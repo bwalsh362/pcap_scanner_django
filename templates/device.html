@@ -7,9 +7,40 @@
 </script>
     <div class="row">
                 <div class="col-lg-12">
-                    <h1 class="page-header">This is the device page</h1>
+                    <h1 id="device_header" class="page-header"></h1>
                 </div>
+                <div id="general_info_div" class="panel panel-default">
+                    <div id="general_info_header" class="panel-heading">
+                        General Information
+                    </div>
+                    <div id="general_info_body" class="panel-body">
+                        <div id="general_info_list" class="list-group">
+                            <ul id="general_list" class="list-group">
 
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+                <div id="interface_info" class="panel panel-default">
+                    <div id="interface_info_header" class="panel-heading">
+                        Interface Information
+                    </div>
+                    <div id="interface_info_body" class="panel-body">
+                        <ul id="interface_list" class="list-group">
+
+                        </ul>
+                    </div>
+                </div>
+                <div id="device_info" class="panel panel-default">
+                    <div id="device_info_header" class="panel-heading">
+                        Device Information
+                    </div>
+                    <div id="device_info_body" class="panel-body">
+                        <ul id="device_list" class="list-group">
+
+                        </ul>
+                    </div>
+                </div>
     </div>
 </div>
 <script src="{% static 'js/device_details.js' %}"></script>
