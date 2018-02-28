@@ -51,7 +51,8 @@ def add_to_db(db, packet_list):
                                   'hostname': packet_list[2],
                                   'conn_devices': packet_list[4],
                                   'interface_details': packet_list[5],
-                                  'device_details': packet_list[6]})
+                                  'device_details': packet_list[6],
+                                  'duplex_details': packet_list[7]})
         else:
             prev_int_details = db.snmp_table.find_one({'hostname': packet_list[2]}, {'_id': 0, 'interface_details': 1})
             details_list = list(prev_int_details.values())
@@ -72,10 +73,10 @@ def calculate_bandwidth(prev_interface_input, interface_speed, new_interface_det
     bandwidth_list = []
     for interface in range(prev_interface_input.__len__()):
         first_equation = (abs(int(prev_interface_input[int(interface)]) - int(new_interface_details_arr[int(interface)][4])) * 8 * 100)
-        second_equation = (time * int(interface_speed[int(interface)]))
+        second_equation = (int(time) * int(interface_speed[int(interface)]))
         bandwidth = (int(first_equation)/int(second_equation))
+        bandwidth = round(bandwidth, 2)
         bandwidth_list.append(bandwidth)
-        print(bandwidth)
     return bandwidth_list
 
 
@@ -96,6 +97,9 @@ def get_details(eng, ip_list, mac_list, oid_list, db):
             details.append(device_details)
         else:
             details.append([""])
+        duplex_details = snmp_walk_details(eng, '1.3.6.1.2.1.10.7.2.1.19', ip)
+        if duplex_details is not None and duplex_details.__len__() >= 1:
+            details.append(duplex_details)
         add_to_db(db, details)
 
 
@@ -145,6 +149,19 @@ def snmp_walk_details(eng, oid, ip):
                     details = parse_interface_details(varBinds, details)
                 elif oid == '1.3.6.1.2.1.47.1.1.1':
                     details = parse_device_details(varBinds, details)
+                elif oid == '1.3.6.1.2.1.10.7.2.1.19':
+                    details = parse_duplex_details(varBinds, details)
+    return details
+
+
+def parse_duplex_details(varBinds, details):
+    name, value = varBinds[0]
+    if value == 2:
+        details.append("HALF-DUPLEX")
+    elif value == 3:
+        details.append("FULL-DUPLEX")
+    else:
+        details.append("UNKNOWN")
     return details
 
 
