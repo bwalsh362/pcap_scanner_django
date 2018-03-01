@@ -4,13 +4,14 @@ from pymongo import MongoClient
 import alert
 import sys
 used_ips = []
+isCisco = False
 
 
 def main():
     print(sys.argv)
     db = create_db_connection()
-    # address = get_def_gateway()
-    address = '10.0.10.1'
+    address = get_def_gateway()
+    # address = '10.0.10.1'
     eng = create_snmp_engine()
     ip_list, mac_list = get_arp_table(eng, address)
     oid_list = ['1.0.8802.1.1.2.1.3.3.0', '1.0.8802.1.1.2.1.3.6.0']
@@ -39,34 +40,35 @@ def get_router_ips(db):
 
 
 def add_to_db(db, packet_list):
-    if packet_list.__len__() >= 5:
-        if db.snmp_table.find_one({'hostname': packet_list[2]}, {"hostname": 1}) is None:
-            alert.send_alert("WARNING!!! A new device with the following information was added."
-                             "\n\tHostname: " + str(packet_list[2]) + "\n"
-                             "\tIP Address(s): " + str(packet_list[0]) + "\n"
-                             "If this was expected, ignore this message.")
-            db.snmp_table.insert({'ip_addr': packet_list[0],
-                                  'mac_addr': packet_list[1],
-                                  'type': packet_list[3],
-                                  'hostname': packet_list[2],
-                                  'conn_devices': packet_list[4],
-                                  'interface_details': packet_list[5],
-                                  'device_details': packet_list[6],
-                                  'duplex_details': packet_list[7]})
-        else:
-            prev_int_details = db.snmp_table.find_one({'hostname': packet_list[2]}, {'_id': 0, 'interface_details': 1})
-            details_list = list(prev_int_details.values())
-            bandwidth_arr = []
-            if sys.argv[4] == "True":
-                prev_interface_input = []
-                interface_speed = []
-                for interface in details_list[0]:
-                    prev_interface_input.append(interface[4])
-                    interface_speed.append(interface[2])
-                bandwidth_arr = calculate_bandwidth(prev_interface_input, interface_speed, packet_list[5], sys.argv[3])
-            db.snmp_table.update({'hostname': packet_list[2]},
-                                 {'$addToSet': {'ip_addr': {'$each': packet_list[0]}, 'mac_addr': {'$each': packet_list[1]}, 'conn_devices': {'$each': packet_list[4]}}, '$set': {'interface_details': packet_list[5], 'bandwidth_util': bandwidth_arr}},
-                                 upsert=True)
+    # if packet_list.__len__() >= 5:
+    if db.snmp_table.find_one({'hostname': packet_list[2]}, {"hostname": 1}) is None:
+        alert.send_alert("WARNING!!! A new device with the following information was added."
+                         "\n\tHostname: " + str(packet_list[2]) + "\n"
+                         "\tIP Address(s): " + str(packet_list[0]) + "\n"
+                         "If this was expected, ignore this message.")
+        db.snmp_table.insert({'ip_addr': packet_list[0],
+                              'mac_addr': packet_list[1],
+                              'type': packet_list[3],
+                              'hostname': packet_list[2],
+                              'conn_devices': packet_list[4],
+                              'interface_details': packet_list[5],
+                              'device_details': packet_list[6],
+                              'duplex_details': packet_list[7]})
+    else:
+        prev_int_details = db.snmp_table.find_one({'hostname': packet_list[2]}, {'_id': 0, 'interface_details': 1})
+        details_list = list(prev_int_details.values())
+        bandwidth_arr = []
+        if sys.argv[4] == "True":
+            prev_interface_input = []
+            interface_speed = []
+            for interface in details_list[0]:
+                print(interface[4])
+                prev_interface_input.append(interface[4])
+                interface_speed.append(interface[2])
+            bandwidth_arr = calculate_bandwidth(prev_interface_input, interface_speed, packet_list[5], sys.argv[3])
+        db.snmp_table.update({'hostname': packet_list[2]},
+                             {'$addToSet': {'ip_addr': {'$each': packet_list[0]}, 'mac_addr': {'$each': packet_list[1]}, 'conn_devices': {'$each': packet_list[4]}}, '$set': {'interface_details': packet_list[5], 'bandwidth_util': bandwidth_arr}},
+                             upsert=True)
 
 
 def calculate_bandwidth(prev_interface_input, interface_speed, new_interface_details_arr, time):
@@ -82,28 +84,44 @@ def calculate_bandwidth(prev_interface_input, interface_speed, new_interface_det
 
 def get_details(eng, ip_list, mac_list, oid_list, db):
     for ip in ip_list:
+        continue_checking = True
         print("Checking IP: " + ip)
         mac = mac_list[ip_list.index(ip)]
         details = [[ip], [mac]]
-        snmp_details(eng, oid_list, details, ip, mac, db)
-        conn_devices = snmp_walk_details(eng, '1.0.8802.1.1.2.1.4.1.1.9', ip)
-        if conn_devices is not None and conn_devices.__len__() >= 1:
-            details.append(conn_devices)
-        interface_details = snmp_walk_details(eng, '1.3.6.1.2.1.2.2', ip)
-        if interface_details is not None and interface_details.__len__() >= 1:
-            details.append(interface_details)
-        device_details = snmp_walk_details(eng, '1.3.6.1.2.1.47.1.1.1', ip)
-        if device_details is not None and device_details.__len__() >= 1:
-            details.append(device_details)
+        continue_checking = snmp_details(eng, oid_list, details, ip, mac, db)
+        # continue_checking = snmp_details(eng, oid_list, details, '10.0.10.9', mac, db)
+        if continue_checking is False:
+            continue
         else:
-            details.append([""])
-        duplex_details = snmp_walk_details(eng, '1.3.6.1.2.1.10.7.2.1.19', ip)
-        if duplex_details is not None and duplex_details.__len__() >= 1:
-            details.append(duplex_details)
-        add_to_db(db, details)
+            conn_devices = snmp_walk_details(eng, '1.0.8802.1.1.2.1.4.1.1.9', ip)
+            if conn_devices.__len__() == 0:
+                conn_devices = snmp_walk_details(eng, '1.3.6.1.4.1.9.9.23.1.2.1.1.6', ip)
+            if conn_devices is not None and conn_devices.__len__() >= 1:
+                details.append(conn_devices)
+            else:
+                details.append([""])
+            interface_details = snmp_walk_details(eng, '1.3.6.1.2.1.2.2', ip)
+            if interface_details is not None and interface_details.__len__() >= 1:
+                details.append(interface_details)
+            else:
+                details.append([""])
+            device_details = snmp_walk_details(eng, '1.3.6.1.2.1.47.1.1.1', ip)
+            if device_details is not None and device_details.__len__() >= 1:
+                details.append(device_details)
+            else:
+                details.append([""])
+            duplex_details = snmp_walk_details(eng, '1.3.6.1.2.1.10.7.2.1.19', ip)
+            if duplex_details is not None and duplex_details.__len__() >= 1:
+                details.append(duplex_details)
+            else:
+                details.append([""])
+            if details.__len__() >= 8:
+                add_to_db(db, details)
 
 
 def snmp_details(eng, oid_list, details, ip, mac, db):
+    check = True
+    global isCisco
     for oid in oid_list:
         g = getCmd(eng,
                    CommunityData(sys.argv[2]),
@@ -113,13 +131,18 @@ def snmp_details(eng, oid_list, details, ip, mac, db):
         results = (next(g))[3]
         if len(results) == 0:
             print("No SNMP response")
-            return
+            check = False
+            return check
         results_value = results[0][1]
-        if str(results_value) == "":
+        if str(results_value) == "" and isCisco is False:
             print("OID does not exist on device")
+            isCisco = True
             snmp_details(eng, ['1.3.6.1.2.1.1.5.0', '1.3.6.1.2.1.1.7.0'], details, ip, mac, db)
             conn_devices = snmp_walk_details(eng, '1.3.6.1.4.1.9.9.23.1.2.1.1.6', ip)
             details.append(conn_devices)
+            return
+        elif isCisco is True:
+            isCisco = False
             return
         else:
             details = parse_details(results, details)
@@ -198,6 +221,9 @@ def parse_interface_details(varBinds, details):
         for item in details:
             if item[0] == str(name).split('.')[-1]:
                 item.append(str(value))
+        for item in details:
+            if 4 < item.__len__():
+                item.append('0')
     return details
 
 
