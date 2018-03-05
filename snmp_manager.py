@@ -5,13 +5,18 @@ import alert
 import sys
 used_ips = []
 isCisco = False
+index_count = 0
+desc_count = 0
+speed_count = 0
+op_count = 0
+in_octets_count = 0
 
 
 def main():
     print(sys.argv)
     db = create_db_connection()
-    address = get_def_gateway()
-    # address = '10.0.10.1'
+    # address = get_def_gateway()
+    address = '10.0.10.1'
     eng = create_snmp_engine()
     ip_list, mac_list = get_arp_table(eng, address)
     oid_list = ['1.0.8802.1.1.2.1.3.3.0', '1.0.8802.1.1.2.1.3.6.0']
@@ -42,10 +47,10 @@ def get_router_ips(db):
 def add_to_db(db, packet_list):
     # if packet_list.__len__() >= 5:
     if db.snmp_table.find_one({'hostname': packet_list[2]}, {"hostname": 1}) is None:
-        alert.send_alert("WARNING!!! A new device with the following information was added."
-                         "\n\tHostname: " + str(packet_list[2]) + "\n"
-                         "\tIP Address(s): " + str(packet_list[0]) + "\n"
-                         "If this was expected, ignore this message.")
+        # alert.send_alert("WARNING!!! A new device with the following information was added."
+        #                  "\n\tHostname: " + str(packet_list[2]) + "\n"
+        #                  "\tIP Address(s): " + str(packet_list[0]) + "\n"
+        #                  "If this was expected, ignore this message.")
         db.snmp_table.insert({'ip_addr': packet_list[0],
                               'mac_addr': packet_list[1],
                               'type': packet_list[3],
@@ -62,9 +67,13 @@ def add_to_db(db, packet_list):
             prev_interface_input = []
             interface_speed = []
             for interface in details_list[0]:
-                print(interface[4])
+                if interface.__len__() < 5:
+                    interface.append('0')
                 prev_interface_input.append(interface[4])
                 interface_speed.append(interface[2])
+                for interface2 in packet_list[5]:
+                    if interface2.__len__() < 5:
+                        interface2.append('0')
             bandwidth_arr = calculate_bandwidth(prev_interface_input, interface_speed, packet_list[5], sys.argv[3])
         db.snmp_table.update({'hostname': packet_list[2]},
                              {'$addToSet': {'ip_addr': {'$each': packet_list[0]}, 'mac_addr': {'$each': packet_list[1]}, 'conn_devices': {'$each': packet_list[4]}}, '$set': {'interface_details': packet_list[5], 'bandwidth_util': bandwidth_arr}},
@@ -76,8 +85,11 @@ def calculate_bandwidth(prev_interface_input, interface_speed, new_interface_det
     for interface in range(prev_interface_input.__len__()):
         first_equation = (abs(int(prev_interface_input[int(interface)]) - int(new_interface_details_arr[int(interface)][4])) * 8 * 100)
         second_equation = (int(time) * int(interface_speed[int(interface)]))
-        bandwidth = (int(first_equation)/int(second_equation))
-        bandwidth = round(bandwidth, 2)
+        if second_equation == 0:
+            bandwidth = 0
+        else:
+            bandwidth = (int(first_equation)/int(second_equation))
+            bandwidth = round(bandwidth, 2)
         bandwidth_list.append(bandwidth)
     return bandwidth_list
 
@@ -203,27 +215,41 @@ def parse_device_details(varBinds, details):
 
 def parse_interface_details(varBinds, details):
     name, value = varBinds[0]
+    global index_count, desc_count, speed_count, op_count, in_octets_count
     if str(name)[:20] == '1.3.6.1.2.1.2.2.1.1.':
         details.append([str(value)])
+        # print("INDEX: " + str(value))
+        index_count = index_count + 1
     elif str(name)[:20] == '1.3.6.1.2.1.2.2.1.2.':
         for item in details:
             if item[0] == str(name).split('.')[-1]:
                 item.append(str(value))
+                # print("DESCRIPTION: " + str(value))
+                desc_count = desc_count + 1
     elif str(name)[:20] == '1.3.6.1.2.1.2.2.1.5.':
         for item in details:
             if item[0] == str(name).split('.')[-1]:
                 item.append(str(value))
+                # print("SPEED: " + str(value))
+                speed_count = speed_count + 1
     elif str(name)[:20] == '1.3.6.1.2.1.2.2.1.8.':
         for item in details:
             if item[0] == str(name).split('.')[-1]:
                 item.append(str(value))
+                # print("OPERATION STATUS: " + str(value))
+                op_count = op_count + 1
     elif str(name)[:20] == '1.3.6.1.2.1.2.2.1.10':
         for item in details:
             if item[0] == str(name).split('.')[-1]:
                 item.append(str(value))
-        for item in details:
-            if 4 < item.__len__():
-                item.append('0')
+                # print("IN OCTETS: " + str(value))
+                in_octets_count = in_octets_count + 1
+            # if item.__len__() < 5:
+            #     print(item[1])
+        # for item in details:
+        #     if item.__len__() < 4:
+        #         item.append('0')
+        #         in_octets_count = in_octets_count + 1
     return details
 
 
@@ -231,10 +257,8 @@ def parse_conn_device_details(varBinds, details):
     name, value = varBinds[0]
     if str(name)[:24] == '1.0.8802.1.1.2.1.4.1.1.9':
         details.append(str(value))
-        print("LLDP Connected Devices: " + value)
     elif str(name)[:28] == '1.3.6.1.4.1.9.9.23.1.2.1.1.6':
         details.append(str(value))
-        print("CDP Connected Devices: " + value)
     return details
 
 
@@ -267,11 +291,11 @@ def check_capabilities(binary):
     binary = binary[2:-8]
     chars = list(binary.zfill(8))
     device = ''
-    if chars[4] == '1' and chars[6] == '1':
+    if chars[2] == '1' and chars[4] == '1':
         device = "ml_switch"
-    elif chars[4] == '1':
+    elif chars[2] == '1':
         device = "switch"
-    elif chars[6] == '1':
+    elif chars[4] == '1':
         device = "router"
     return device
 
