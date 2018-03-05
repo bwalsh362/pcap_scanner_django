@@ -10,11 +10,7 @@ WAIT_TIME=30
 WAIT_CYCLE=30
 
 echo "Starting mongod service..."
-if service --status-all | grep -Fq 'mongod'; then
-    service mongod start
-else
-    echo "NOT INSTALLED"
-fi
+service mongod start
 echo "Mongod service started"
 source "$WORKING_DIR$VIRTUAL_ENV"
 nohup python "$WORKING_DIR$RUN_SERVER" runserver $WEB_IP_PORT &
